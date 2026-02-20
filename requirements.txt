@@ -1,0 +1,5 @@
+kivy
+kivy_garden.mapview
+requests
+plyer
+certifi
