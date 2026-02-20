@@ -1,39 +1,36 @@
 [app]
-
-# (str) Uygulamanın adı
 title = Kurye Takip
-
-# (str) Paket adı (boşluk ve özel karakter içermemeli)
 package.name = kuryetakip
-
-# (str) Paket domaini
 package.domain = org.takip
-
-# (str) Kaynak kodlarının olduğu dizin
 source.dir = .
-
-# (list) Dahil edilecek dosya uzantıları
 source.include_exts = py,png,jpg,kv,atlas
-
-# (str) Uygulama versiyonu
 version = 1.0
 
-# (list) Uygulamanın çalışması için gereken kütüphaneler (KRİTİK BÖLÜM)
-# openssl ve certifi olmazsa Firebase bağlantısı APK'da çalışmaz!
-requirements = python3,kivy,kivy_garden.mapview,requests,plyer,urllib3,certifi,openssl,android
+# Kritik kütüphaneler: openssl ve certifi Firebase için şarttır
+requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,plyer,urllib3,certifi,openssl,android
 
-# (str) Ekran yönü (portrait, landscape veya all)
 orientation = portrait
-
-# (bool) Tam ekran modu
 fullscreen = 0
 
-# (list) Android İzinleri (GPS ve İnternet için şart)
+# Gerekli izinler
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE
 
-# (int) Hedef Android API (Genelde 31 veya 33 idealdir)
 android.api = 33
+android.minapi = 21
+android.sdk = 33
+android.ndk = 25b
 
+# Hata riskini azaltmak için sadece arm64-v8a bırakıldı
+android.archs = arm64-v8a
+
+android.enable_androidx = True
+log_level = 2
+
+[buildozer]
+log_level = 2
+warn_on_root = 1
+build_dir = ./.buildozer
+bin_dir = ./bin
 # (int) Minimum Android API
 android.minapi = 21
 
