@@ -47,15 +47,7 @@ android.enable_androidx = True
 log_level = 2
 
 [buildozer]
-
-# (int) Log seviyesi
 log_level = 2
-
-# (int) Root olarak çalıştırma uyarısı (Colab'da kullanırken 1 olmalı)
 warn_on_root = 1
-
-# (str) Build dizini
 build_dir = ./.buildozer
-
-# (str) Bin dizini (APK buraya çıkacak)
 bin_dir = ./bin
