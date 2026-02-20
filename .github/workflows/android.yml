@@ -1,0 +1,23 @@
+name: Android APK Build
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -位 libffi-dev gzip zip unzip
+          pip install --upgrade Cython==0.29.33 buildozer
+
+      - name: Build with Buildozer
+        run: buildozer android debug
+        
+      - name: Upload APK
+        uses: actions/upload-artifact@v3
+        with:
+          name: Kurye-Takip-APK
+          path: bin/*.apk
