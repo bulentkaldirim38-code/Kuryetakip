@@ -54,3 +54,4 @@ warn_on_root = 1
 # (str) Build dizinleri
 build_dir = ./.buildozer
 bin_dir = ./bin
+
