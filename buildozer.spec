@@ -1,72 +1,67 @@
 [app]
 
-# (str) Title of your application
+# (str) Uygulama başlığı
 title = Kurye Takip
 
-# (str) Package name
+# (str) Paket adı
 package.name = kuryetakip
 
-# (str) Package domain (needed for android packaging)
+# (str) Paket alanı
 package.domain = org.takip
 
-# (str) Source code where the main.py live
+# (str) main.py dosyasının bulunduğu dizin
 source.dir = .
 
-# (list) Source files to include (let empty to include all the files)
+# (list) Dahil edilecek dosya uzantıları
 source.include_exts = py,png,jpg,kv,atlas
 
-# (str) Application version
+# (str) Uygulama versiyonu
 version = 1.0
 
-# (list) Application requirements
-# ÖNEMLİ: Manuel konum ve SSL bağlantısı için certifi, openssl ve plyer şarttır.
-requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,openssl,urllib3,plyer,android
+# (list) Uygulama gereksinimleri
+# NOT: 'mapview' ve 'certifi' Firebase/Harita bağlantısı için kritiktir.
+requirements = python3, kivy==2.3.0, mapview, requests, certifi, urllib3, plyer, android
 
-# (str) Supported orientation (one of landscape, portrait or all)
+# (str) Desteklenen yön (portrait = dikey)
 orientation = portrait
 
-# (bool) Indicate if the application should be fullscreen or not
+# (bool) Tam ekran modu
 fullscreen = 0
 
-# (list) Permissions
-# Konum ve internet erişimi için gerekli izinler
+# (list) Gerekli Android izinleri
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE
 
-# (int) Target Android API, should be as high as possible.
+# (int) Hedef Android API (Modern cihazlar için 33 idealdir)
 android.api = 33
 
-# (int) Minimum API your APK will support.
+# (int) Minimum Desteklenen API
 android.minapi = 21
 
-# (str) Android NDK version to use
+# (str) Android NDK sürümü
 android.ndk = 25b
 
-# (str) Android NDK directory (if empty, it will be automatically downloaded)
-android.ndk_path = 
-
-# (str) Android SDK directory (if empty, it will be automatically downloaded)
-android.sdk_path = 
-
-# (list) Android architectures to build for
-# Hata payını azaltmak ve derlemeyi hızlandırmak için sadece modern 64-bit mimari
+# (list) Desteklenen mimariler (Hata riskini azaltmak için arm64-v8a yeterlidir)
 android.archs = arm64-v8a
 
-# (bool) Use --dir for source activation
+# (bool) AndroidX desteği (Harita kütüphanesi için True olmalı)
 android.enable_androidx = True
 
-# (list) The Android archs to build for, choices: armeabi-v7a, arm64-v8a, x86, x86_64
-# Sadece tek bir mimariyi (arm64-v8a) bırakmak disk alanı hatalarını önler.
+# (bool) Güvenli olmayan ağ trafiğine izin ver (Firebase bağlantı sorunlarını önler)
+android.allow_cleartext = True
+
+# (list) Servisler (Arka planda konum göndermek istersen ileride burası kullanılacak)
+# services = KuryeServis:service.py
 
 [buildozer]
 
-# (int) Log level (0 = error only, 1 = info, 2 = debug (with command output))
+# (int) Log seviyesi (2 = debug, tüm hataları detaylı gösterir)
 log_level = 2
 
-# (int) Display warning if buildozer is run as root (0 = False, 1 = True)
+# (int) Root olarak çalıştırma uyarısı
 warn_on_root = 1
 
-# (str) Path to build artifacts
+# (str) Build dosyalarının saklanacağı dizin
 build_dir = ./.buildozer
 
-# (str) Path to bin directory
+# (str) APK'nın çıkacağı dizin
 bin_dir = ./bin
