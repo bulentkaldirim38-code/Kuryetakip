@@ -48,8 +48,8 @@ jobs:
 
     - name: Build with Buildozer
       run: |
-        # Klasör varsa temizlik yap, yoksa hata vermeden devam et (Hatanın çözümü burasıdır)
-        [ -d ".buildozer" ] && buildozer android clean || echo "Temizlenecek klasör bulunamadı, devam ediliyor."
+        # SADECE klasör varsa temizle, yoksa hata verme (Hatanın kesin çözümü)
+        if [ -d ".buildozer" ]; then buildozer android clean; fi
         yes | buildozer android debug
       env:
         TERM: xterm
