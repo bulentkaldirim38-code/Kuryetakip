@@ -1,7 +1,5 @@
 import os
-import certifi
-import requests
-import random
+import json
 import sys
 from kivy.app import App
 from kivy_garden.mapview import MapView, MapMarker
@@ -14,30 +12,24 @@ from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
 from kivy.clock import Clock
 from kivy.utils import platform
+from kivy.network.urlrequest import UrlRequest
 
-# --- HATA YAKALAMA VE DOSYA YOLU AYARI ---
+# Android ve Masaüstü için Dosya Yolu Ayarı
 if platform == 'android':
     from android.storage import app_storage_path
     data_dir = app_storage_path()
+    from android.permissions import request_permissions, Permission, check_permission
+    from plyer import gps
 else:
     data_dir = os.getcwd()
 
-report_path = os.path.join(data_dir, "HATA_RAPORU.txt")
-sys.stderr = open(report_path, "w") # Hataları dosyaya yazar
-
-# SSL ve Android İzinleri
-if platform == 'android':
-    from android.permissions import request_permissions, Permission, check_permission
-    from plyer import gps
-
-os.environ['SSL_CERT_FILE'] = certifi.where()
-
 class KuryeHaritaApp(App):
     def build(self):
+        # Firebase URL (Sonunda '/' olmadığına ve '.app' ile bittiğine emin ol)
         self.base_url = "https://canlikonum-b3b18-default-rtdb.europe-west1.firebasedatabase.app"
-        # İsim dosyasını güvenli yere kaydet
         self.id_file = os.path.join(data_dir, "user_name.txt")
         self.my_id = None
+        self.is_approved = False 
         
         self.main_layout = FloatLayout()
         self.mapview = MapView(zoom=10, lat=38.96, lon=35.24)
@@ -50,8 +42,8 @@ class KuryeHaritaApp(App):
         self.main_layout.add_widget(self.scroll_view)
 
         self.status_label = Label(
-            text="Giriş bekleniyor...", size_hint=(1, 0.1), pos_hint={'x': 0, 'y': 0.01},
-            color=(0, 0, 0, 1), bold=True
+            text="Bağlantı bekleniyor...", size_hint=(1, 0.1), pos_hint={'x': 0, 'y': 0.01},
+            color=(1, 0, 0, 1), bold=True
         )
         self.main_layout.add_widget(self.status_label)
         
@@ -60,36 +52,66 @@ class KuryeHaritaApp(App):
         return self.main_layout
 
     def on_start(self):
+        # Eğer isim sorma kutusu gelmiyorsa aşağıdaki satırı geçici olarak aktif edebilirsin:
+        # if os.path.exists(self.id_file): os.remove(self.id_file)
+
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 self.my_id = f.read().strip()
-            self.setup_app_logic()
+            self.check_approval_status()
+            Clock.schedule_interval(self.get_data, 5)
         else:
             self.show_login_popup()
 
     def show_login_popup(self):
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         content.add_widget(Label(text="Kurye Adınızı Giriniz:"))
-        self.name_input = TextInput(text='', multiline=False, hint_text="Örn: Ahmet_299")
+        self.name_input = TextInput(text='', multiline=False, hint_text="Örn: Bulent")
         content.add_widget(self.name_input)
-        btn = Button(text="Tamam", size_hint_y=None, height=100, background_color=(0, 0.7, 0, 1))
+        btn = Button(text="Kaydol ve Onay Bekle", size_hint_y=None, height=100, background_color=(0, 0.7, 0, 1))
         content.add_widget(btn)
         self.popup = Popup(title='Giriş Yap', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
-        btn.bind(on_release=self.save_name_and_start)
+        btn.bind(on_release=self.register_user)
         self.popup.open()
 
-    def save_name_and_start(self, instance):
+    def register_user(self, instance):
         name = self.name_input.text.strip()
         if name:
             self.my_id = name
             with open(self.id_file, "w") as f:
                 f.write(self.my_id)
+            
+            # Firebase'e ilk kayıt (Approved: False)
+            params = json.dumps({'lat': 38.96, 'lon': 35.24, 'approved': False})
+            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", 
+                       req_body=params, method='PUT', 
+                       on_success=self.on_register_success)
+            
             self.popup.dismiss()
-            self.setup_app_logic()
+            self.check_approval_status()
+            Clock.schedule_interval(self.get_data, 5)
 
-    def setup_app_logic(self):
-        self.status_label.text = f"Hoş geldin, {self.my_id}"
-        Clock.schedule_interval(self.get_data, 5)
+    def on_register_success(self, request, result):
+        print("Kullanıcı Firebase'e başarıyla eklendi.")
+
+    def check_approval_status(self, *args):
+        if self.my_id:
+            UrlRequest(f"{self.base_url}/users/{self.my_id}/approved.json", 
+                       on_success=self.on_approval_check)
+
+    def on_approval_check(self, request, result):
+        if result is True:
+            if not self.is_approved:
+                self.is_approved = True
+                self.status_label.text = f"ONAYLI: {self.my_id}"
+                self.status_label.color = (0, 0.7, 0, 1)
+                self.setup_gps()
+        else:
+            self.is_approved = False
+            self.status_label.text = "ADMİN ONAYI BEKLENİYOR..."
+            Clock.schedule_once(self.check_approval_status, 10)
+
+    def setup_gps(self):
         if platform == 'android':
             permissions = [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION]
             if all([check_permission(p) for p in permissions]):
@@ -105,64 +127,34 @@ class KuryeHaritaApp(App):
     def start_gps_logic(self):
         try:
             gps.configure(on_location=self.my_location_callback)
-            gps.start(minTime=1000, minDistance=1)
+            gps.start(minTime=2000, minDistance=5)
         except: pass
 
     def my_location_callback(self, **kwargs):
-        lat, lon = kwargs.get('lat'), kwargs.get('lon')
-        if self.my_id and lat and lon:
-            try:
-                requests.put(f"{self.base_url}/users/{self.my_id}.json",
-                             json={'lat': lat, 'lon': lon}, verify=certifi.where(), timeout=5)
-            except Exception as e:
-                print(f"Hata: {e}") # Bu hata HATA_RAPORU.txt'ye gider
-
-    def user_click_action(self, instance):
-        name = instance.text.replace("[b][color=#000000]", "").replace("[/color][/b]", "")
-        if name in self.user_coords:
-            coords = self.user_coords[name]
-            self.mapview.center_on(coords['lat'], coords['lon'])
-            self.mapview.zoom = 15
-            Clock.schedule_once(lambda dt: self.refresh_and_jump(name), 1)
-
-    def refresh_and_jump(self, name):
-        try:
-            res = requests.get(f"{self.base_url}/users/{name}.json", verify=certifi.where(), timeout=5)
-            new_data = res.json()
-            if new_data:
-                self.mapview.center_on(new_data['lat'], new_data['lon'])
-        except: pass
+        if self.is_approved and self.my_id:
+            lat, lon = kwargs.get('lat'), kwargs.get('lon')
+            params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
+            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
 
     def get_data(self, dt):
-        try:
-            res = requests.get(f"{self.base_url}/users.json", verify=certifi.where(), timeout=5)
-            data = res.json()
-            if data:
-                self.user_coords = data
-                self.user_list_layout.clear_widgets()
-                for uid, coords in data.items():
-                    if not isinstance(coords, dict): continue
-                    is_me = (uid == self.my_id)
-                    btn = Button(
-                        text=f"[b][color=#000000]{uid}[/color][/b]",
-                        markup=True, size_hint_y=None, height=60,
-                        background_normal='',
-                        background_color=(0, 0.9, 0, 1) if is_me else (0.9, 0.9, 0.9, 1)
-                    )
-                    btn.bind(on_release=self.user_click_action)
+        UrlRequest(f"{self.base_url}/users.json", on_success=self.on_data_success)
+
+    def on_data_success(self, request, result):
+        if result and isinstance(result, dict):
+            self.user_list_layout.clear_widgets()
+            for uid, data in result.items():
+                if isinstance(data, dict) and data.get('approved') is True:
+                    btn = Button(text=f"[b]{uid}[/b]", markup=True, size_hint_y=None, height=70)
+                    btn.bind(on_release=lambda x, u=uid: self.mapview.center_on(result[u]['lat'], result[u]['lon']))
                     self.user_list_layout.add_widget(btn)
                     
-                    lt, ln = coords.get('lat'), coords.get('lon')
+                    lt, ln = data.get('lat'), data.get('lon')
                     if uid in self.markers:
                         self.markers[uid].lat, self.markers[uid].lon = lt, ln
                     else:
                         m = MapMarker(lat=lt, lon=ln)
                         self.mapview.add_widget(m)
                         self.markers[uid] = m
-        except: pass
-
-    def on_stop(self):
-        sys.stderr.close() # Uygulama kapanınca log dosyasını kapat
 
 if __name__ == '__main__':
     KuryeHaritaApp().run()
