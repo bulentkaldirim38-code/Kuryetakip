@@ -44,13 +44,12 @@ jobs:
           zip \
           unzip
         pip install --upgrade pip
-        # Kivy 2.3.0 için Cython 3.0.10 daha kararlıdır
-        pip install buildozer cython==3.0.10
+        pip install buildozer cython==0.29.33
 
     - name: Build with Buildozer
       run: |
-        # Önceki hatalı derleme kalıntılarını temizlemek için
-        buildozer android clean
+        # Sadece klasör varsa temizlik yap, yoksa hatayı görmezden gel
+        if [ -d ".buildozer" ]; then buildozer android clean; fi
         yes | buildozer android debug
       env:
         TERM: xterm
