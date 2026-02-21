@@ -4,9 +4,8 @@ package.name = kuryetakip
 package.domain = org.takip
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 1.4
+version = 1.5
 
-# Cython sürümü burada belirtilmez, YAML içinden kurulur.
 requirements = python3, kivy==2.3.0, mapview, requests, certifi, urllib3, plyer, android, openssl
 
 orientation = portrait
@@ -17,9 +16,6 @@ android.features = android.hardware.location.gps
 
 android.api = 33
 android.minapi = 21
-# GitHub Actions otomatik bulması için NDK yolunu ve sürümünü boş bırakıyoruz
-# android.ndk = 25b
-
 android.archs = arm64-v8a, armeabi-v7a
 android.enable_androidx = True
 android.allow_cleartext = True
