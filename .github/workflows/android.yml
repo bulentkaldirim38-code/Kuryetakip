@@ -1,41 +1,60 @@
 name: Android APK Build
-on: [push, pull_request]
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
+    - uses: actions/checkout@v3
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@v3
-        with:
-          java-version: '17'
-          distribution: 'temurin'
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.10'
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
 
-      - name: Free Disk Space
-        run: |
-          sudo docker image prune --all --force
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          libffi-dev \
+          libssl-dev \
+          libsqlite3-dev \
+          zlib1g-dev \
+          python3-pip \
+          autoconf \
+          automake \
+          libtool \
+          pkg-config \
+          cmake \
+          gettext \
+          libltdl-dev \
+          zip \
+          unzip
+        pip install --upgrade pip
+        pip install buildozer cython==0.29.33
 
-      - name: Install Dependencies
-        run: |
-          pip install --upgrade "Cython<3.0" buildozer
-          sudo apt update
-          sudo apt install -y build-essential ccache git libncurses5 libstdc++6 zlib1g-dev libffi-dev libssl-dev python3-dev libgdm-dev libdbus-1-dev
+    - name: Build with Buildozer
+      run: |
+        # Buildozer'ın NDK ve SDK'yı GitHub üzerinde otomatik kurması için
+        yes | buildozer android debug
+      env:
+        TERM: xterm
 
-      - name: Build with Buildozer
-        run: |
-          export JAVA_HOME=$JAVA_HOME_17_X64
-          yes | buildozer android debug
-        
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: Kurye-Takip-APK
-          path: bin/*.apk
+    - name: Upload APK
+      uses: actions/upload-artifact@v3
+      with:
+        name: KuryeTakip-APK
+        path: bin/*.apk
