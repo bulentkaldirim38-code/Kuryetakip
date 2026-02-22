@@ -6,19 +6,15 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 2.0
 
-# Cython ve Pyjnius sürümlerini sabitleyerek derleme hatasını gideriyoruz
-requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,kivy_garden.mapview,requests,certifi,urllib3,plyer
+requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,sqlite3,requests,certifi,urllib3,plyer,kivy_garden.mapview
 
 orientation = portrait
 fullscreen = 0
 
-# İzinler
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE
-android.features = android.hardware.location.gps
 
 android.api = 33
 android.minapi = 21
-# Modern cihazlar için 64-bit mimari
 android.archs = arm64-v8a
 
 android.enable_androidx = True
