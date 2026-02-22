@@ -4,21 +4,23 @@ package.name = kuryetakip
 package.domain = org.takip
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 1.8
+version = 1.9
 
-# Gerekli kütüphaneler
-requirements = python3, kivy==2.3.0, mapview, requests, certifi, urllib3, plyer, android, openssl
+# Gereksinimleri en temel ve çalışan kütüphanelere indirdik
+requirements = python3, kivy==2.3.0, mapview, requests, certifi, urllib3, plyer, android
 
 orientation = portrait
 fullscreen = 0
 
-# Konum ve İnternet İzinleri
+# İzinler
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE
 android.features = android.hardware.location.gps
 
 android.api = 33
 android.minapi = 21
+# Mimaride hata payını azaltmak için sadece modern cihazlar (64 bit)
 android.archs = arm64-v8a
+
 android.enable_androidx = True
 android.allow_cleartext = True
 
