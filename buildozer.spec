@@ -6,8 +6,7 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 2.0
 
-# Kütüphaneleri en stabil halleriyle yazıyoruz
-requirements = python3, kivy==2.3.0, mapview, requests, certifi, urllib3, plyer, android
+requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,urllib3,plyer
 
 orientation = portrait
 fullscreen = 0
