@@ -48,8 +48,6 @@ jobs:
 
     - name: Build with Buildozer
       run: |
-        # SADECE klasör varsa temizle, yoksa hata verme (Hatanın kesin çözümü)
-        if [ -d ".buildozer" ]; then buildozer android clean; fi
         yes | buildozer android debug
       env:
         TERM: xterm
