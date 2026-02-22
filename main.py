@@ -15,14 +15,12 @@ from kivy.network.urlrequest import UrlRequest
 
 class KuryeHaritaApp(App):
     def build(self):
-        # 1. Ayarlar
         self.base_url = "https://canlikonum-b3b18-default-rtdb.europe-west1.firebasedatabase.app"
         self.id_file = os.path.join(self.user_data_dir, "user_name.txt")
         self.my_id = None
         self.is_approved = False 
         self.markers = {}
 
-        # 2. Arayüz
         self.main_layout = FloatLayout()
         self.mapview = MapView(zoom=10, lat=38.96, lon=35.24)
         self.main_layout.add_widget(self.mapview)
@@ -33,15 +31,13 @@ class KuryeHaritaApp(App):
         self.scroll_view.add_widget(self.user_list_layout)
         self.main_layout.add_widget(self.scroll_view)
 
-        # Durum Paneli
         self.status_label = Label(
-            text="Başlatılıyor...", size_hint=(1, 0.12), 
+            text="Sistem Hazırlanıyor...", size_hint=(1, 0.12), 
             pos_hint={'x': 0, 'y': 0},
             color=(1, 1, 1, 1), bold=True,
             outline_width=2, outline_color=(0,0,0,1)
         )
         self.main_layout.add_widget(self.status_label)
-        
         return self.main_layout
 
     def on_start(self):
@@ -49,9 +45,7 @@ class KuryeHaritaApp(App):
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 self.my_id = f.read().strip()
-            
             if self.my_id:
-                self.status_label.text = f"Giriş: {self.my_id.upper()}"
                 self.check_approval_status()
             else:
                 self.show_login_popup()
@@ -61,9 +55,9 @@ class KuryeHaritaApp(App):
     def show_login_popup(self):
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
         content.add_widget(Label(text="Kurye Adınızı Giriniz:"))
-        self.name_input = TextInput(text='', multiline=False, hint_text="Örn: bulent")
+        self.name_input = TextInput(text='', multiline=False, hint_text="Örn: kurye1")
         content.add_widget(self.name_input)
-        btn = Button(text="Kaydol ve Onay Bekle", size_hint_y=None, height=100)
+        btn = Button(text="Kaydet", size_hint_y=None, height=100)
         content.add_widget(btn)
         self.popup = Popup(title='Kayıt', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
         btn.bind(on_release=self.register_user)
@@ -73,15 +67,11 @@ class KuryeHaritaApp(App):
         name = self.name_input.text.strip().lower()
         if name:
             self.my_id = name
-            try:
-                with open(self.id_file, "w") as f:
-                    f.write(self.my_id)
-                params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
-                UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
-                self.popup.dismiss()
-                self.check_approval_status()
-            except Exception as e:
-                self.status_label.text = f"HATA: {e}"
+            with open(self.id_file, "w") as f: f.write(self.my_id)
+            params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
+            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
+            self.popup.dismiss()
+            self.check_approval_status()
 
     def check_approval_status(self, *args):
         if self.my_id:
@@ -94,7 +84,7 @@ class KuryeHaritaApp(App):
             self.status_label.color = (0, 1, 0, 1)
             self.setup_gps()
         else:
-            self.status_label.text = "ADMİN ONAYI BEKLENİYOR..."
+            self.status_label.text = "Onay Bekleniyor (Firebase'den true yapın)..."
             Clock.schedule_once(self.check_approval_status, 10)
 
     def setup_gps(self):
@@ -115,9 +105,8 @@ class KuryeHaritaApp(App):
         try:
             from plyer import gps
             gps.configure(on_location=self.my_location_callback)
-            # Wi-Fi ve Şebeke konumu için minTime=1000
             gps.start(minTime=1000, minDistance=0)
-            self.status_label.text = "Konum Aranıyor (Hızlı Mod)..."
+            self.status_label.text = "Hızlı Konum Modu Aktif (GPS+Ağ)..."
         except Exception as e:
             self.status_label.text = f"GPS Hatası: {e}"
 
@@ -128,9 +117,6 @@ class KuryeHaritaApp(App):
             if self.is_approved and self.my_id:
                 params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
                 UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
-
-    def on_net_error(self, req, error):
-        self.status_label.text = f"NETWORK HATASI: {error}"
 
     def get_data(self, dt):
         UrlRequest(f"{self.base_url}/users.json", on_success=self.on_data_success)
