@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # Daha kararlı olan 22.04 sürümüne geçtik
+    runs-on: ubuntu-22.04
 
     steps:
     - uses: actions/checkout@v4
@@ -33,7 +33,6 @@ jobs:
           libssl-dev \
           libsqlite3-dev \
           zlib1g-dev \
-          python3-pip \
           autoconf \
           automake \
           libtool \
@@ -44,11 +43,12 @@ jobs:
           zip \
           unzip
         pip install --upgrade pip
-        # Kivy 2.3.0 için 3.0.x serisi Cython daha iyidir
-        pip install buildozer cython==3.0.10 
+        # En stabil Cython sürümünü zorluyoruz
+        pip install "cython<3.0.0" buildozer 
 
     - name: Build with Buildozer
       run: |
+        # Temizlik komutu tamamen çıkarıldı, doğrudan derleme
         yes | buildozer android debug
       env:
         TERM: xterm
