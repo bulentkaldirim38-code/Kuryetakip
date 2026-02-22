@@ -6,7 +6,8 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
 version = 2.0
 
-requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,urllib3,plyer
+# Cython ve Pyjnius sürümlerini sabitleyerek derleme hatasını gideriyoruz
+requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,kivy_garden.mapview,requests,certifi,urllib3,plyer
 
 orientation = portrait
 fullscreen = 0
