@@ -46,20 +46,19 @@ jobs:
             zip \
             unzip
           pip install --upgrade pip
-          pip install buildozer cython gitpython pexpect sh
+          # Cython sürümünü 3.0.0'ın altında sabitlemek kritik öneme sahip
+          pip install "cython<3.0.0" buildozer gitpython pexpect sh
 
       - name: Docker Clean Up
         run: sudo docker image prune --all --force
 
       - name: Build with Buildozer
         run: |
-          # Terminal (ioctl) hatalarını önlemek için sanal terminal ayarları
           export COLUMNS=80
           export LINES=24
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILD_NONINTERACTIVE=1
           
-          # Lisansları otomatik onayla ve derlemeyi başlat
           yes | buildozer android debug
         env:
           TERM: xterm
