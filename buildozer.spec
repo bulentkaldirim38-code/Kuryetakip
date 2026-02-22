@@ -3,25 +3,29 @@ title = Kurye Takip
 package.name = kuryetakip
 package.domain = org.takip
 source.dir = .
-source.include_exts = py,png,jpg,kv,atlas
+source.include_exts = py,png,jpg,kv,atlas,html
 version = 2.2
 
-# Requirements listesi GitHub'ı yormamak için en sade haline getirildi
-requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,requests,certifi,plyer,kivy_garden.mapview
+# Gereksinimler (Kivy_garden.mapview kurulumu için en güvenli yol)
+requirements = python3,kivy==2.3.0,requests,certifi,plyer,kivy-garden,kivy_garden.mapview
 
 orientation = portrait
 fullscreen = 0
 
-# İzinler ve Özellikler
+# İzinler
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE, ACCESS_WIFI_STATE
 android.features = android.hardware.location.gps, android.hardware.location.network
 
-# Sunucu yükünü azaltmak için API 31 ve NDK 25b sabitlemesi
+# SDK ve NDK Ayarları (GitHub için en stabil versiyonlar)
 android.api = 31
 android.minapi = 21
 android.ndk = 25b
 android.ndk_api = 21
-android.archs = arm64-v8a
+android.accept_sdk_license = True
+android.skip_update = False
+
+# Mimari (Hem yeni hem eski telefonlar için)
+android.archs = arm64-v8a, armeabi-v7a
 
 android.enable_androidx = True
 android.allow_cleartext = True
