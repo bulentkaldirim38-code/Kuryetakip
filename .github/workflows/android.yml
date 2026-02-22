@@ -40,12 +40,11 @@ jobs:
           pip install --upgrade pip
           pip install buildozer cython gitpython pexpect sh
 
-      - name: Docker Clean Up (Free Space)
+      - name: Docker Clean Up
         run: sudo docker image prune --all --force
 
       - name: Build with Buildozer
         run: |
-          # Etkileşimli olmayan ortamda tüm lisansları otomatik kabul etmek için 'yes |' kullanılır
           yes | buildozer android debug
         env:
           TERM: xterm
