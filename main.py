@@ -80,7 +80,7 @@ class KuryeHaritaApp(App):
     def on_approval_check(self, request, result):
         if result is True:
             self.is_approved = True
-            self.status_label.text = "ONAYLANDI! Konum Alınıyor..."
+            self.status_label.text = "ONAYLANDI! Konum Bekleniyor..."
             self.status_label.color = (0, 1, 0, 1)
             self.setup_gps()
         else:
