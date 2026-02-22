@@ -1,4 +1,4 @@
-name: Android Build
+Name: Android Build
 
 on:
   push:
@@ -44,27 +44,27 @@ jobs:
             libncursesw5 \
             cmake \
             zip \
-            unzip
+            unzip \
+            git
           pip install --upgrade pip
-          # Cython sürümünü 3.0.0'ın altında sabitlemek kritik öneme sahip
-          pip install "cython<3.0.0" buildozer gitpython pexpect sh
-
-      - name: Docker Clean Up
-        run: sudo docker image prune --all --force
+          # Kivy 2.2.1 ve üzeri için Cython 0.29.33 en güvenli sürümdür
+          pip install "cython<3.0.0" buildozer
 
       - name: Build with Buildozer
         run: |
-          export COLUMNS=80
-          export LINES=24
+          # Buildozer'ın etkileşimli soruları atlaması için kritik ayarlar
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
-          export BUILD_NONINTERACTIVE=1
+          export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          yes | buildozer android debug
+          # 'yes' komutu tüm lisans ve onay sorularına otomatik 'y' der
+          # '--verbose' yerine doğrudan buildozer.spec içindeki log_level kullanılır
+          yes | buildozer -v android debug
         env:
           TERM: xterm
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: package
+          name: KuryeTakip-Uygulamasi
           path: bin/*.apk
+          if-no-files-found: error
