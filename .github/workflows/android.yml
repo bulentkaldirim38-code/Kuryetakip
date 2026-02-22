@@ -53,12 +53,16 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # Loglardaki terminal (ioctl) hatasını önlemek için etkileşimi simüle ediyoruz
+          # Terminal (ioctl) hatalarını önlemek için sanal terminal ayarları
+          export COLUMNS=80
+          export LINES=24
+          export APP_ANDROID_ACCEPT_SDK_LICENSE=1
+          export BUILD_NONINTERACTIVE=1
+          
+          # Lisansları otomatik onayla ve derlemeyi başlat
           yes | buildozer android debug
         env:
           TERM: xterm
-          # Buildozer'ın hata vermesini önlemek için bazı çevresel değişkenler
-          BUILD_NONINTERACTIVE: "1"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
