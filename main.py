@@ -15,43 +15,49 @@ from kivy.network.urlrequest import UrlRequest
 
 class KuryeHaritaApp(App):
     def build(self):
-        # 1. Ayarlar
+        # 1. Firebase ve Dosya Yapılandırması
         self.base_url = "https://canlikonum-b3b18-default-rtdb.europe-west1.firebasedatabase.app"
         self.id_file = os.path.join(self.user_data_dir, "user_name.txt")
         self.my_id = None
         self.is_approved = False 
         self.markers = {}
 
-        # 2. Arayüz
+        # 2. Arayüz Tasarımı
         self.main_layout = FloatLayout()
+        
+        # Harita (Türkiye merkezli başlar)
         self.mapview = MapView(zoom=10, lat=38.96, lon=35.24)
         self.main_layout.add_widget(self.mapview)
         
+        # Kurye Listesi (Sağ Üst)
         self.scroll_view = ScrollView(size_hint=(0.4, 0.45), pos_hint={'top': 0.98, 'right': 0.98})
         self.user_list_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=5)
         self.user_list_layout.bind(minimum_height=self.user_list_layout.setter('height'))
         self.scroll_view.add_widget(self.user_list_layout)
         self.main_layout.add_widget(self.scroll_view)
 
-        # Hata Gösterici Label (Kritik)
+        # Durum ve Hata Paneli (Alt Kısım)
         self.status_label = Label(
-            text="Sistem Başlatılıyor...", size_hint=(1, 0.12), 
+            text="Sistem Hazırlanıyor...", size_hint=(1, 0.12), 
             pos_hint={'x': 0, 'y': 0},
             color=(1, 1, 1, 1), bold=True,
-            outline_width=2, outline_color=(0,0,0,1) # Okunabilirlik için dış hat
+            outline_width=2, outline_color=(0,0,0,1)
         )
         self.main_layout.add_widget(self.status_label)
         
         return self.main_layout
 
     def on_start(self):
+        # Verileri her 5 saniyede bir güncelle
         Clock.schedule_interval(self.get_data, 5)
+        
+        # Kullanıcı kayıt kontrolü
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 self.my_id = f.read().strip()
             
             if self.my_id:
-                self.status_label.text = f"Giriş: {self.my_id} | Onay Sorgulanıyor..."
+                self.status_label.text = f"Giriş: {self.my_id.upper()} | Onay Bekleniyor..."
                 self.check_approval_status()
             else:
                 self.show_login_popup()
@@ -63,9 +69,11 @@ class KuryeHaritaApp(App):
         content.add_widget(Label(text="Kurye Adınızı Giriniz:"))
         self.name_input = TextInput(text='', multiline=False, hint_text="Örn: bulent")
         content.add_widget(self.name_input)
+        
         btn = Button(text="Kaydol ve Onay Bekle", size_hint_y=None, height=100)
         content.add_widget(btn)
-        self.popup = Popup(title='Giriş Yap', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
+        
+        self.popup = Popup(title='Kayıt Ekranı', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
         btn.bind(on_release=self.register_user)
         self.popup.open()
 
@@ -77,6 +85,7 @@ class KuryeHaritaApp(App):
                 with open(self.id_file, "w") as f:
                     f.write(self.my_id)
                 
+                # Firebase'e ilk kayıt (konum 0,0 ve onay false)
                 params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
                 UrlRequest(
                     f"{self.base_url}/users/{self.my_id}.json", 
@@ -100,17 +109,19 @@ class KuryeHaritaApp(App):
 
     def on_approval_check(self, request, result):
         if result is True:
-            self.is_approved = True
-            self.status_label.text = f"ONAYLANDI: {self.my_id.upper()} | GPS İzni İsteniyor..."
-            self.status_label.color = (0, 1, 0, 1)
-            self.setup_gps()
+            if not self.is_approved:
+                self.is_approved = True
+                self.status_label.text = "ONAYLANDI! Konum Servisleri Başlatılıyor..."
+                self.status_label.color = (0, 1, 0, 1)
+                self.setup_gps()
         else:
-            self.status_label.text = "ADMİN ONAYI BEKLENİYOR (Firebase'den true yapın)"
+            self.status_label.text = "ADMİN ONAYI BEKLENİYOR (Firebase'den onaylayın)"
             Clock.schedule_once(self.check_approval_status, 10)
 
     def setup_gps(self):
         if platform == 'android':
             from android.permissions import request_permissions, Permission, check_permission
+            # Hem GPS hem de Ağ (Wi-Fi/Baz İstasyonu) izinlerini iste
             perms = [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION]
             if all([check_permission(p) for p in perms]):
                 self.start_gps_logic()
@@ -123,23 +134,28 @@ class KuryeHaritaApp(App):
         if all(results):
             self.start_gps_logic()
         else:
-            self.status_label.text = "HATA: Konum izni reddedildi!"
+            self.status_label.text = "HATA: Konum izinleri reddedildi!"
 
     def start_gps_logic(self):
         try:
             from plyer import gps
+            # Konum geldiğinde çalışacak fonksiyonu bağla
             gps.configure(on_location=self.my_location_callback)
-            gps.start(minTime=2000, minDistance=1)
-            self.status_label.text = "GPS Aktif: Uydu Bekleniyor..."
+            
+            # minTime: 1000ms (1 saniye) - Daha hızlı güncelleme
+            # minDistance: 0 - En küçük hareketi bile yakala (Wi-Fi için ideal)
+            gps.start(minTime=1000, minDistance=0)
+            
+            self.status_label.text = "Servis Hazır: Konum Aranıyor (GPS+Ağ)..."
         except Exception as e:
-            self.status_label.text = f"HATA: GPS Başlatılamadı: {e}"
+            self.status_label.text = f"HATA: GPS/Ağ Başlatılamadı: {e}"
 
     def my_location_callback(self, **kwargs):
         lat = kwargs.get('lat')
         lon = kwargs.get('lon')
         
-        # GPS verisi geldiği an label'da göster (Hata ayıklama için)
-        self.status_label.text = f"KONUM ALINDI: {lat}, {lon}"
+        # Ekranda anlık koordinatı göster (Hata ayıklama için)
+        self.status_label.text = f"KONUM: {lat}, {lon} (Firebase'e Gönderiliyor)"
         
         if self.is_approved and self.my_id and lat:
             params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
@@ -151,7 +167,7 @@ class KuryeHaritaApp(App):
             )
 
     def on_net_error(self, req, error):
-        self.status_label.text = f"NETWORK HATASI: {error}"
+        self.status_label.text = f"BAĞLANTI HATASI: {error}"
         self.status_label.color = (1, 0, 0, 1)
 
     def get_data(self, dt):
@@ -161,11 +177,12 @@ class KuryeHaritaApp(App):
         if not result or not isinstance(result, dict): return
         self.user_list_layout.clear_widgets()
         for uid, data in result.items():
-            if isinstance(data, dict) and data.get('approved'):
+            if isinstance(data, dict) and data.get('approved') is True:
                 lat, lon = data.get('lat'), data.get('lon')
                 if lat and lat != 0:
                     btn = Button(text=f"{uid.upper()}", size_hint_y=None, height=60)
-                    btn.bind(on_release=lambda x, u=uid, la=lat, lo=lon: self.mapview.center_on(la, lo))
+                    # Butona basınca kuryeye odaklan
+                    btn.bind(on_release=lambda x, la=lat, lo=lon: self.mapview.center_on(la, lo))
                     self.user_list_layout.add_widget(btn)
                     
                     if uid in self.markers:
