@@ -36,7 +36,15 @@ jobs:
             zlib1g-dev \
             libasound2-dev \
             libpulse-dev \
-            python3-pip
+            python3-pip \
+            autoconf \
+            libtool \
+            pkg-config \
+            libncurses5 \
+            libncursesw5 \
+            cmake \
+            zip \
+            unzip
           pip install --upgrade pip
           pip install buildozer cython gitpython pexpect sh
 
@@ -45,10 +53,12 @@ jobs:
 
       - name: Build with Buildozer
         run: |
-          # Loglardaki 'Inappropriate ioctl' hatasını önlemek ve lisansları onaylamak için
+          # Loglardaki terminal (ioctl) hatasını önlemek için etkileşimi simüle ediyoruz
           yes | buildozer android debug
         env:
           TERM: xterm
+          # Buildozer'ın hata vermesini önlemek için bazı çevresel değişkenler
+          BUILD_NONINTERACTIVE: "1"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
