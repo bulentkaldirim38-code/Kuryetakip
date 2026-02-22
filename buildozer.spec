@@ -4,19 +4,20 @@ package.name = kuryetakip
 package.domain = org.takip
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
-version = 2.1
+version = 2.2
 
-# Gereksiz ağır paketleri (sqlite3, openssl) çıkardım, derleme hızlanacak
-requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,requests,certifi,urllib3,plyer,kivy_garden.mapview
+# Requirements listesi GitHub'ı yormamak için en sade haline getirildi
+requirements = python3,kivy==2.3.0,cython==0.29.36,pyjnius,requests,certifi,plyer,kivy_garden.mapview
 
 orientation = portrait
 fullscreen = 0
 
-# Hassas konum izinleri
+# İzinler ve Özellikler
 android.permissions = INTERNET, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION, ACCESS_NETWORK_STATE, ACCESS_WIFI_STATE
 android.features = android.hardware.location.gps, android.hardware.location.network
 
-android.api = 33
+# Sunucu yükünü azaltmak için API 31 ve NDK 25b sabitlemesi
+android.api = 31
 android.minapi = 21
 android.ndk = 25b
 android.ndk_api = 21
