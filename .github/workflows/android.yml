@@ -45,6 +45,7 @@ jobs:
 
       - name: Build with Buildozer
         run: |
+          # Loglardaki 'Inappropriate ioctl' hatasını önlemek ve lisansları onaylamak için
           yes | buildozer android debug
         env:
           TERM: xterm
