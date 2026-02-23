@@ -12,6 +12,15 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
+      # Sanal makinede yer açma ve RAM rahatlatma (Kritik Hamle)
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
         with:
@@ -28,9 +37,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            libasound2-dev libpulse-dev python3-pip autoconf automake libtool \
-            pkg-config libncurses5-dev libncursesw5-dev cmake zip unzip git \
-            m4 gettext libltdl-dev
+            autoconf automake libtool pkg-config cmake zip unzip git gettext libltdl-dev
           pip install --upgrade pip
           pip install "cython<3.0.0" buildozer python-for-android
 
@@ -38,13 +45,15 @@ jobs:
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
+          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g" # Belleği 4GB'a zorla
           
-          # Gradle'ın bellek hatası vermemesi için ayar
-          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2g"
-          
-          # Videolarında anlattığın o meşhur buildozer komutu:
-          # Log seviyesini biraz düşürdük ki GitHub logları kesmesin
-          buildozer -v android debug
+          # Sessiz modda çalıştırıyoruz, sadece hata varsa basacak
+          # Bu sayede loglar şişmeyecek ve süreç kesilmeyecek
+          buildozer android debug || {
+            echo "--- HATA TESPİT EDİLDİ (Son 100 Satır) ---"
+            tail -n 100 .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build.log 2>/dev/null || tail -n 100 buildozer.log
+            exit 1
+          }
         env:
           TERM: xterm
 
