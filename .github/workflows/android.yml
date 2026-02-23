@@ -31,28 +31,25 @@ jobs:
             libasound2-dev libpulse-dev python3-pip autoconf libtool \
             pkg-config libncurses-dev cmake zip unzip git
           pip install --upgrade pip
-          pip install "cython<3.0.0" buildozer
+          # En stabil Cython sürümünü zorlayalım
+          pip install "cython==0.29.33" buildozer
 
-      - name: Build with Buildozer (Silent Mode)
+      - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          echo "Derleme başladı... Lütfen bekleyin (15-20 dk sürebilir)."
-          # Çıktıyı build.log dosyasına kaydeder, ekrana basmaz
+          # Süreci başlat ve sadece hata mesajlarını (Error/Fail) ekrana bas
           yes | buildozer -v android debug > build.log 2>&1 || {
-            echo "------------------------------------------"
-            echo "HATA OLUŞTU! Son 100 satır aşağıdadır:"
-            echo "------------------------------------------"
-            tail -n 100 build.log
+            echo "--- KRİTİK HATA TESPİT EDİLDİ ---"
+            grep -iE "error|fail|exception|missing" build.log | tail -n 50
             exit 1
           }
-          echo "Derleme başarıyla tamamlandı!"
         env:
           TERM: xterm
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: KuryeTakip_Paketi
+          name: KuryeTakip_APK
           path: bin/*.apk
