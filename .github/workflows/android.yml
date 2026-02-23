@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04 # Daha kararlı olan bir önceki sürüme çekiyoruz
+    runs-on: ubuntu-22.04
 
     steps:
       - name: Checkout Repository
@@ -32,21 +32,18 @@ jobs:
             pkg-config libncurses5-dev libncursesw5-dev cmake zip unzip git \
             m4 gettext libltdl-dev
           pip install --upgrade pip
-          pip install "cython<3.0.0" "buildozer>=1.5.0" "python-for-android>=2023.9.14"
+          pip install "cython<3.0.0" buildozer python-for-android
 
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          # Buildozer'ın eski kalıntılarını temizle ve taze başla
-          buildozer android clean
-          
-          # Hata analizi için log tut, ama süreci durdurma
+          # 'clean' komutunu sildik, çünkü GitHub Actions zaten her seferinde temiz bir makine açıyor.
+          # Sadece hata anında son logları gösteren sistem:
           yes | buildozer -v android debug > build.log 2>&1 || {
-            echo "--- HATA ANALİZİ ---"
-            # Makro hatası devam ediyorsa logun tamamını değil, can alıcı yerini bas
-            tail -n 100 build.log
+            echo "--- HATA TESPİT EDİLDİ ---"
+            tail -n 150 build.log
             exit 1
           }
         env:
