@@ -39,14 +39,16 @@ jobs:
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          # Doğrudan terminale yazdırıyoruz ki hata anında GitHub ekranında görebilelim
-          # 'yes' komutu ile tüm lisansları otomatik onaylıyoruz
-          yes | buildozer -v android debug
+          # Gradle'ın bellek hatası vermemesi için ayar
+          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx2g"
+          
+          # Videolarında anlattığın o meşhur buildozer komutu:
+          # Log seviyesini biraz düşürdük ki GitHub logları kesmesin
+          buildozer -v android debug
         env:
           TERM: xterm
 
       - name: Upload APK
-        if: success() # Sadece başarılı olursa yükle
         uses: actions/upload-artifact@v4
         with:
           name: KuryeTakip_Final_APK
