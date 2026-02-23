@@ -12,14 +12,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      # Sanal makinede yer açma ve RAM rahatlatma (Kritik Hamle)
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
-          sudo rm -rf "/usr/local/share/boost"
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -45,13 +42,13 @@ jobs:
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
-          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g" # Belleği 4GB'a zorla
+          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g"
           
-          # Sessiz modda çalıştırıyoruz, sadece hata varsa basacak
-          # Bu sayede loglar şişmeyecek ve süreç kesilmeyecek
-          buildozer android debug || {
-            echo "--- HATA TESPİT EDİLDİ (Son 100 Satır) ---"
-            tail -n 100 .buildozer/android/platform/build-arm64-v8a_armeabi-v7a/build.log 2>/dev/null || tail -n 100 buildozer.log
+          # LOG_LEVEL 1 yaparak gereksiz mesajları kestik. 
+          # Sadece gerçekten önemli olanları göreceğiz.
+          buildozer -v android debug --log_level=1 || {
+            echo "--- KRİTİK HATA GÖZLEMLENDİ ---"
+            tail -n 150 buildozer.log 2>/dev/null || echo "Log dosyası bulunamadı."
             exit 1
           }
         env:
