@@ -3,6 +3,7 @@ name: Android Build
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch: # Manuel çalıştırma butonu ekler
 
 jobs:
   build:
@@ -15,8 +16,8 @@ jobs:
       - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /usr/local/lib/android
           sudo rm -rf /opt/ghc
+          # Android SDK'yı silmiyoruz çünkü Buildozer kendi SDK'sını yönetir
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -29,39 +30,49 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      # Build süresini hızlandırmak için SDK ve NDK'yı önbelleğe alıyoruz
+      - name: Cache Buildozer Data
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            .buildozer
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+
       - name: Install Dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
             build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            autoconf automake libtool pkg-config cmake zip unzip git gettext libltdl-dev
+            autoconf automake libtool pkg-config cmake zip unzip git gettext libltdl-dev \
+            libncurses5 libncursesw5-dev
           pip install --upgrade pip
           pip install "cython<3.0.0" buildozer python-for-android
 
-      - name: Build with Buildozer (Silent Mode)
+      - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
-          export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g"
           
-          # Arka planda buildozer'ı çalıştır ve logu gizle
-          # Aynı zamanda her 5 dakikada bir GitHub'a "yaşıyorum" mesajı gönder
-          (buildozer -v android debug > buildozer_output.log 2>&1 &
+          # Buildozer'ı arka planda başlatıp logları bir dosyaya yazıyoruz
+          (buildozer android debug > buildozer_output.log 2>&1 &
            PID=$!
+           echo "Buildozer başlatıldı (PID: $PID)... APK pişiyor."
+           
+           # GitHub'ın zaman aşımına uğramaması için her 1 dakikada bir logun sonunu bas
            while kill -0 $PID 2>/dev/null; do
-             echo "Buildozer hala çalışıyor... APK mutfakta pişiyor..."
-             sleep 300
+             echo "--- Build devam ediyor... (Son 5 satır) ---"
+             tail -n 5 buildozer_output.log
+             sleep 60
            done
            wait $PID) || {
             echo "--- !!! HATA OLUŞTU !!! ---"
             tail -n 100 buildozer_output.log
             exit 1
           }
-        env:
-          TERM: xterm
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: KuryeTakip_Final_APK
+          name: KuryeTakip_V2.2
           path: bin/*.apk
