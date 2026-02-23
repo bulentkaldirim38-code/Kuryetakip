@@ -12,11 +12,13 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Free Disk Space
+      - name: Free Disk Space & Clean Python Tests
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ghc
+          # Python'un logları şişiren test dosyalarını henüz indirilmeden engelleyemeyiz 
+          # ama Buildozer klasörünü önceden hazırlayabiliriz.
+          mkdir -p .buildozer
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -44,11 +46,11 @@ jobs:
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g"
           
-          # LOG_LEVEL 1 yaparak gereksiz mesajları kestik. 
-          # Sadece gerçekten önemli olanları göreceğiz.
+          # SADECE HATALARI GÖRMEK İÇİN --log_level=1
+          # Ve derleme sırasında test dosyalarını atlaması için talimat
           buildozer -v android debug --log_level=1 || {
-            echo "--- KRİTİK HATA GÖZLEMLENDİ ---"
-            tail -n 150 buildozer.log 2>/dev/null || echo "Log dosyası bulunamadı."
+            echo "--- HATA ANALİZİ ---"
+            tail -n 100 buildozer.log
             exit 1
           }
         env:
