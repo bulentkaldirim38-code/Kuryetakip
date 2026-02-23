@@ -28,20 +28,21 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            libasound2-dev libpulse-dev python3-pip autoconf libtool libtool-bin \
-            pkg-config libncurses-dev cmake zip unzip git m4
+            libasound2-dev libpulse-dev python3-pip autoconf automake libtool libtool-bin \
+            pkg-config libncurses-dev cmake zip unzip git m4 gettext autopoint
           pip install --upgrade pip
-          pip install "cython<3.0.0" buildozer
+          # Kivy 2.3.0 için en kararlı sürüm
+          pip install "cython==0.29.33" buildozer
 
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          # Hata anında sadece son kısmı gösteren süzgeçli sistem
+          # Hata ayıklama filtresi: Sadece hataları ve kritik adımları göster
           yes | buildozer -v android debug > build.log 2>&1 || {
-            echo "--- HATA DETAYI ---"
-            grep -iE "error|fail|exception" build.log | tail -n 50
+            echo "--- HATA ANALİZİ ---"
+            grep -iE "error|fail|exception|undefined macro" build.log | tail -n 50
             exit 1
           }
         env:
