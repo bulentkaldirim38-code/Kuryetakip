@@ -6,7 +6,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04 # Daha kararlı olan bir önceki sürüme çekiyoruz
 
     steps:
       - name: Checkout Repository
@@ -28,21 +28,25 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            libasound2-dev libpulse-dev python3-pip autoconf automake libtool libtool-bin \
-            pkg-config libncurses-dev cmake zip unzip git m4 gettext autopoint
+            libasound2-dev libpulse-dev python3-pip autoconf automake libtool \
+            pkg-config libncurses5-dev libncursesw5-dev cmake zip unzip git \
+            m4 gettext libltdl-dev
           pip install --upgrade pip
-          # Kivy 2.3.0 için en kararlı sürüm
-          pip install "cython==0.29.33" buildozer
+          pip install "cython<3.0.0" "buildozer>=1.5.0" "python-for-android>=2023.9.14"
 
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          # Hata ayıklama filtresi: Sadece hataları ve kritik adımları göster
+          # Buildozer'ın eski kalıntılarını temizle ve taze başla
+          buildozer android clean
+          
+          # Hata analizi için log tut, ama süreci durdurma
           yes | buildozer -v android debug > build.log 2>&1 || {
             echo "--- HATA ANALİZİ ---"
-            grep -iE "error|fail|exception|undefined macro" build.log | tail -n 50
+            # Makro hatası devam ediyorsa logun tamamını değil, can alıcı yerini bas
+            tail -n 100 build.log
             exit 1
           }
         env:
