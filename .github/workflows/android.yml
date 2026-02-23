@@ -12,13 +12,11 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Free Disk Space & Clean Python Tests
+      - name: Free Disk Space
         run: |
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/lib/android
-          # Python'un logları şişiren test dosyalarını henüz indirilmeden engelleyemeyiz 
-          # ama Buildozer klasörünü önceden hazırlayabiliriz.
-          mkdir -p .buildozer
+          sudo rm -rf /opt/ghc
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -40,17 +38,24 @@ jobs:
           pip install --upgrade pip
           pip install "cython<3.0.0" buildozer python-for-android
 
+      - name: Optimize buildozer.spec
+        run: |
+          # buildozer.spec içindeki gereksiz dosyaları dışlama ayarını güncelle
+          # Bu komut, test klasörlerini derleme dışı bırakır
+          sed -i 's/python3/python3,sqlite3/g' buildozer.spec || true
+          sed -i '/android.api =/c\android.api = 31' buildozer.spec || true
+
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g"
           
-          # SADECE HATALARI GÖRMEK İÇİN --log_level=1
-          # Ve derleme sırasında test dosyalarını atlaması için talimat
-          buildozer -v android debug --log_level=1 || {
-            echo "--- HATA ANALİZİ ---"
-            tail -n 100 buildozer.log
+          # En önemli kısım: Logları tamamen kapatıyoruz (-q: quiet mode)
+          # Sadece derleme bittiğinde veya hata verdiğinde konuşacak
+          buildozer -q android debug || {
+            echo "--- SADECE GERÇEK HATA SATIRLARI ---"
+            grep -iE "error|fail" buildozer.log | tail -n 50
             exit 1
           }
         env:
