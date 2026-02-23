@@ -28,21 +28,20 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            libasound2-dev libpulse-dev python3-pip autoconf libtool \
-            pkg-config libncurses-dev cmake zip unzip git
+            libasound2-dev libpulse-dev python3-pip autoconf libtool libtool-bin \
+            pkg-config libncurses-dev cmake zip unzip git m4
           pip install --upgrade pip
-          # En stabil Cython sürümünü zorlayalım
-          pip install "cython==0.29.33" buildozer
+          pip install "cython<3.0.0" buildozer
 
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           
-          # Süreci başlat ve sadece hata mesajlarını (Error/Fail) ekrana bas
+          # Hata anında sadece son kısmı gösteren süzgeçli sistem
           yes | buildozer -v android debug > build.log 2>&1 || {
-            echo "--- KRİTİK HATA TESPİT EDİLDİ ---"
-            grep -iE "error|fail|exception|missing" build.log | tail -n 50
+            echo "--- HATA DETAYI ---"
+            grep -iE "error|fail|exception" build.log | tail -n 50
             exit 1
           }
         env:
@@ -51,5 +50,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: KuryeTakip_APK
+          name: KuryeTakip_Final_APK
           path: bin/*.apk
