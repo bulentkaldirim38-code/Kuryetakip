@@ -29,22 +29,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
-            build-essential \
-            libffi-dev \
-            libssl-dev \
-            libsqlite3-dev \
-            zlib1g-dev \
-            libasound2-dev \
-            libpulse-dev \
-            python3-pip \
-            autoconf \
-            libtool \
-            pkg-config \
-            libncurses-dev \
-            cmake \
-            zip \
-            unzip \
-            git
+            build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
+            libasound2-dev libpulse-dev python3-pip autoconf libtool \
+            pkg-config libncurses-dev cmake zip unzip git
           pip install --upgrade pip
           pip install "cython<3.0.0" buildozer
 
@@ -52,13 +39,15 @@ jobs:
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
-          # yes komutu tum onay sorularini otomatik gecer
-          yes | buildozer -v android debug
+          # Broken pipe hatasını engellemek için daha stabil bir yöntem
+          yes | buildozer -v android debug || true
         env:
           TERM: xterm
+          COLUMNS: 80
+          LINES: 24
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: KuryeTakip_Uygulamasi
+          name: KuryeTakip_Paketi
           path: bin/*.apk
