@@ -38,24 +38,23 @@ jobs:
           pip install --upgrade pip
           pip install "cython<3.0.0" buildozer python-for-android
 
-      - name: Optimize buildozer.spec
-        run: |
-          # buildozer.spec içindeki gereksiz dosyaları dışlama ayarını güncelle
-          # Bu komut, test klasörlerini derleme dışı bırakır
-          sed -i 's/python3/python3,sqlite3/g' buildozer.spec || true
-          sed -i '/android.api =/c\android.api = 31' buildozer.spec || true
-
-      - name: Build with Buildozer
+      - name: Build with Buildozer (Silent Mode)
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
           export GRADLE_OPTS="-Dorg.gradle.jvmargs=-Xmx4g"
           
-          # En önemli kısım: Logları tamamen kapatıyoruz (-q: quiet mode)
-          # Sadece derleme bittiğinde veya hata verdiğinde konuşacak
-          buildozer -q android debug || {
-            echo "--- SADECE GERÇEK HATA SATIRLARI ---"
-            grep -iE "error|fail" buildozer.log | tail -n 50
+          # Arka planda buildozer'ı çalıştır ve logu gizle
+          # Aynı zamanda her 5 dakikada bir GitHub'a "yaşıyorum" mesajı gönder
+          (buildozer -v android debug > buildozer_output.log 2>&1 &
+           PID=$!
+           while kill -0 $PID 2>/dev/null; do
+             echo "Buildozer hala çalışıyor... APK mutfakta pişiyor..."
+             sleep 300
+           done
+           wait $PID) || {
+            echo "--- !!! HATA OLUŞTU !!! ---"
+            tail -n 100 buildozer_output.log
             exit 1
           }
         env:
