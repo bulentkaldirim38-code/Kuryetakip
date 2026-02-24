@@ -2,6 +2,7 @@
 import os
 import certifi
 import json
+import urllib.parse
 
 # Firebase (HTTPS) bağlantı hatalarını önlemek için SSL sertifikasını tanımlıyoruz
 os.environ['SSL_CERT_FILE'] = certifi.where()
@@ -22,7 +23,11 @@ from kivy.network.urlrequest import UrlRequest
 try:
     from kivy_garden.mapview import MapView, MapMarker
 except ImportError:
-    print("MapView kütüphanesi yüklü değil!")
+    try:
+        from kivy.garden.mapview import MapView, MapMarker
+    except ImportError:
+        MapView = None
+        MapMarker = None
 
 class KuryeHaritaApp(App):
     def build(self):
@@ -32,6 +37,12 @@ class KuryeHaritaApp(App):
         self.my_id = None
         self.is_approved = False 
         self.markers = {}
+
+        if MapView is None:
+            return Label(
+                text="HATA: MapView kütüphanesi bulunamadı!\nLütfen 'kivy_garden.mapview' paketinin yüklü olduğundan emin olun.",
+                halign="center"
+            )
 
         self.main_layout = FloatLayout()
         
@@ -90,21 +101,24 @@ class KuryeHaritaApp(App):
             # Firebase'e ilk kayıt
             params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
             headers = {'Content-type': 'application/json'}
-            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, req_headers=headers, method='PUT')
+            safe_id = urllib.parse.quote(self.my_id)
+            UrlRequest(f"{self.base_url}/users/{safe_id}.json", req_body=params, req_headers=headers, method='PUT')
             
             self.popup.dismiss()
             self.check_approval_status()
 
     def check_approval_status(self, *args):
         if self.my_id:
-            UrlRequest(f"{self.base_url}/users/{self.my_id}/approved.json", on_success=self.on_approval_check)
+            safe_id = urllib.parse.quote(self.my_id)
+            UrlRequest(f"{self.base_url}/users/{safe_id}/approved.json", on_success=self.on_approval_check)
 
     def on_approval_check(self, request, result):
         if result is True:
-            self.is_approved = True
-            self.status_label.text = "ONAYLANDI! Konum Bekleniyor..."
-            self.status_label.color = (0, 1, 0, 1)
-            self.setup_gps()
+            if not self.is_approved:
+                self.is_approved = True
+                self.status_label.text = "ONAYLANDI! Konum Bekleniyor..."
+                self.status_label.color = (0, 1, 0, 1)
+                self.setup_gps()
         else:
             self.status_label.text = "Onay Bekleniyor (Firebase'den true yapın)..."
             Clock.schedule_once(self.check_approval_status, 10)
@@ -138,13 +152,14 @@ class KuryeHaritaApp(App):
     @mainthread
     def my_location_callback(self, **kwargs):
         lat, lon = kwargs.get('lat'), kwargs.get('lon')
-        if lat:
+        if lat is not None and lon is not None:
             self.status_label.text = f"KONUM: {lat}, {lon}"
             if self.is_approved and self.my_id:
                 # Konumu Firebase'e gönder
                 params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
                 headers = {'Content-type': 'application/json'}
-                UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, req_headers=headers, method='PUT')
+                safe_id = urllib.parse.quote(self.my_id)
+                UrlRequest(f"{self.base_url}/users/{safe_id}.json", req_body=params, req_headers=headers, method='PUT')
 
     def get_data(self, dt):
         UrlRequest(f"{self.base_url}/users.json", on_success=self.on_data_success)
@@ -156,7 +171,7 @@ class KuryeHaritaApp(App):
         for uid, data in result.items():
             if isinstance(data, dict) and data.get('approved'):
                 lat, lon = data.get('lat'), data.get('lon')
-                if lat and lat != 0:
+                if lat is not None and lon is not None:
                     # Kullanıcı Listesini Güncelle
                     btn = Button(text=uid.upper(), size_hint_y=None, height=60)
                     btn.bind(on_release=lambda x, la=lat, lo=lon: self.mapview.center_on(la, lo))
@@ -167,7 +182,7 @@ class KuryeHaritaApp(App):
                         self.markers[uid].lat, self.markers[uid].lon = lat, lon
                     else:
                         m = MapMarker(lat=lat, lon=lon)
-                        self.mapview.add_widget(m)
+                        self.mapview.add_marker(m)
                         self.markers[uid] = m
 
 if __name__ == '__main__':
