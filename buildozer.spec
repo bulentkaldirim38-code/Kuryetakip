@@ -6,8 +6,9 @@ source.dir = .
 source.include_exts = py,png,jpg,kv,atlas,html
 version = 2.2
 
-requirements = python3, kivy==2.3.0, Cython==0.29.33, requests, certifi, plyer, kivy-garden, kivy_garden.mapview
-
+requirements = python3,kivy==2.3.0,cython==0.29.33,requests,certifi,plyer,pyjnius
+p4a.branch = develop
+p4a.version = develop
 orientation = portrait
 fullscreen = 0
 
