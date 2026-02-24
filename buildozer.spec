@@ -7,7 +7,7 @@ source.include_exts = py,png,jpg,kv,atlas,html
 version = 2.2
 
 # Requirements: Cython versiyonu Kivy 2.3.0 ile uyumlu hale getirildi
-requirements = python3,kivy==2.3.0,cython==0.29.33,requests,certifi,plyer,jnius,pyjnius
+requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,plyer,pyjnius
 
 orientation = portrait
 fullscreen = 0
