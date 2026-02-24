@@ -42,9 +42,6 @@ jobs:
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
-          # Önceki hatalı kalıntıları temizle
-          buildozer android clean
-          # Derlemeyi başlat
           buildozer -v android debug
         env:
           TERM: xterm
