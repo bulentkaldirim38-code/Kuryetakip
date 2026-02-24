@@ -1,30 +1,12 @@
 # cython: language_level=3
 import os
 import certifi
+import json
 
+# Firebase (HTTPS) bağlantı hatalarını önlemek için SSL sertifikasını tanımlıyoruz
 os.environ['SSL_CERT_FILE'] = certifi.where()
 
-import json
 from kivy.app import App
-
-try:
-    from kivy_garden.mapview import MapView, MapMarker
-except ImportError:
-
-    pass
-import requests
-
-def send_to_firebase(self, lat, lon):
-    url = "https://SENIN-PROJEN-default-rtdb.firebaseio.com/konum.json"
-    data = {"enlem": lat, "boylam": lon}
-    
-    try:
-        # put veya patch kullanabilirsin
-        response = requests.patch(url, json=data) 
-        print("Firebase Cevabı:", response.status_code)
-    except Exception as e:
-        print("Firebase Gönderim Hatası:", e)
-        
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
@@ -32,12 +14,19 @@ from kivy.uix.floatlayout import FloatLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 from kivy.uix.popup import Popup
-from kivy.clock import Clock
+from kivy.clock import Clock, mainthread
 from kivy.utils import platform
 from kivy.network.urlrequest import UrlRequest
 
+# MapView kütüphanesini güvenli bir şekilde içe aktaralım
+try:
+    from kivy_garden.mapview import MapView, MapMarker
+except ImportError:
+    print("MapView kütüphanesi yüklü değil!")
+
 class KuryeHaritaApp(App):
     def build(self):
+        # Firebase URL (Sonunda .json olmadan ana URL)
         self.base_url = "https://canlikonum-b3b18-default-rtdb.europe-west1.firebasedatabase.app"
         self.id_file = os.path.join(self.user_data_dir, "user_name.txt")
         self.my_id = None
@@ -45,15 +34,19 @@ class KuryeHaritaApp(App):
         self.markers = {}
 
         self.main_layout = FloatLayout()
+        
+        # Harita ayarları
         self.mapview = MapView(zoom=10, lat=38.96, lon=35.24)
         self.main_layout.add_widget(self.mapview)
         
+        # Sağ üstteki kullanıcı listesi
         self.scroll_view = ScrollView(size_hint=(0.4, 0.45), pos_hint={'top': 0.98, 'right': 0.98})
         self.user_list_layout = BoxLayout(orientation='vertical', size_hint_y=None, spacing=5)
         self.user_list_layout.bind(minimum_height=self.user_list_layout.setter('height'))
         self.scroll_view.add_widget(self.user_list_layout)
         self.main_layout.add_widget(self.scroll_view)
 
+        # Alt bilgi çubuğu
         self.status_label = Label(
             text="Sistem Hazırlanıyor...", size_hint=(1, 0.12), 
             pos_hint={'x': 0, 'y': 0},
@@ -64,7 +57,9 @@ class KuryeHaritaApp(App):
         return self.main_layout
 
     def on_start(self):
+        # 5 saniyede bir haritadaki diğer kuryeleri güncelle
         Clock.schedule_interval(self.get_data, 5)
+        
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 self.my_id = f.read().strip()
@@ -91,8 +86,12 @@ class KuryeHaritaApp(App):
         if name:
             self.my_id = name
             with open(self.id_file, "w") as f: f.write(self.my_id)
+            
+            # Firebase'e ilk kayıt
             params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
-            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
+            headers = {'Content-type': 'application/json'}
+            UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, req_headers=headers, method='PUT')
+            
             self.popup.dismiss()
             self.check_approval_status()
 
@@ -122,7 +121,10 @@ class KuryeHaritaApp(App):
             self.start_gps_logic()
 
     def permission_callback(self, permissions, results):
-        if all(results): self.start_gps_logic()
+        if all(results): 
+            self.start_gps_logic()
+        else:
+            self.status_label.text = "HATA: Konum izni verilmedi!"
 
     def start_gps_logic(self):
         try:
@@ -133,17 +135,21 @@ class KuryeHaritaApp(App):
         except Exception as e:
             self.status_label.text = f"GPS Hatası: {e}"
 
+    @mainthread
     def my_location_callback(self, **kwargs):
         lat, lon = kwargs.get('lat'), kwargs.get('lon')
         if lat:
             self.status_label.text = f"KONUM: {lat}, {lon}"
             if self.is_approved and self.my_id:
+                # Konumu Firebase'e gönder
                 params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
-                UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, method='PUT')
+                headers = {'Content-type': 'application/json'}
+                UrlRequest(f"{self.base_url}/users/{self.my_id}.json", req_body=params, req_headers=headers, method='PUT')
 
     def get_data(self, dt):
         UrlRequest(f"{self.base_url}/users.json", on_success=self.on_data_success)
 
+    @mainthread
     def on_data_success(self, request, result):
         if not result or not isinstance(result, dict): return
         self.user_list_layout.clear_widgets()
@@ -151,9 +157,12 @@ class KuryeHaritaApp(App):
             if isinstance(data, dict) and data.get('approved'):
                 lat, lon = data.get('lat'), data.get('lon')
                 if lat and lat != 0:
+                    # Kullanıcı Listesini Güncelle
                     btn = Button(text=uid.upper(), size_hint_y=None, height=60)
                     btn.bind(on_release=lambda x, la=lat, lo=lon: self.mapview.center_on(la, lo))
                     self.user_list_layout.add_widget(btn)
+                    
+                    # Haritadaki Marker'ı Güncelle veya Ekle
                     if uid in self.markers:
                         self.markers[uid].lat, self.markers[uid].lon = lat, lon
                     else:
