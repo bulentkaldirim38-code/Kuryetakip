@@ -1,5 +1,9 @@
 # cython: language_level=3
 import os
+import certifi
+
+os.environ['SSL_CERT_FILE'] = certifi.where()
+
 import json
 from kivy.app import App
 
@@ -8,7 +12,19 @@ try:
 except ImportError:
 
     pass
+import requests
 
+def send_to_firebase(self, lat, lon):
+    url = "https://SENIN-PROJEN-default-rtdb.firebaseio.com/konum.json"
+    data = {"enlem": lat, "boylam": lon}
+    
+    try:
+        # put veya patch kullanabilirsin
+        response = requests.patch(url, json=data) 
+        print("Firebase Cevabı:", response.status_code)
+    except Exception as e:
+        print("Firebase Gönderim Hatası:", e)
+        
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.boxlayout import BoxLayout
