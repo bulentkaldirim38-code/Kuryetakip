@@ -1,6 +1,9 @@
 import os
 import json
 from kivy.app import App
+try:
+from kivy_garden.mapview import MapView, MapMarker
+except ImportError:
 from kivy_garden.mapview import MapView, MapMarker
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
