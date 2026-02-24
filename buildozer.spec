@@ -7,7 +7,7 @@ source.include_exts = py,png,jpg,kv,atlas,html
 version = 2.2
 
 # Requirements: Cython versiyonu Kivy 2.3.0 ile uyumlu hale getirildi
-requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,plyer,pyjnius
+requirements = python3,kivy==2.3.0,kivy_garden.mapview,requests,certifi,plyer,pyjnius,openssl
 
 orientation = portrait
 fullscreen = 0
@@ -27,11 +27,7 @@ android.archs = arm64-v8a,armeabi-v7a
 android.enable_androidx = True
 android.allow_cleartext = True
 
-# Cython dil seviyesini zorlamak için bu satırı ekledim
-p4a.extra_args = --use-setup-py
-
 p4a.source_dir = 
-p4a.local_recipes = ./recipes
 p4a.bootstrap = sdl2
 
 [buildozer]
