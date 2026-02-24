@@ -36,12 +36,14 @@ jobs:
             autoconf automake libtool pkg-config cmake zip unzip git gettext \
             libltdl-dev libgles2-mesa-dev libsdl2-dev
           pip install --upgrade pip
-          pip install "Cython==0.29.33" buildozer python-for-android
+          pip install "Cython<3.0" buildozer python-for-android
 
       - name: Build with Buildozer
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
+          # Cython uyarısını ve hatasını çözen kritik değişken:
+          export P4A_CYTHON_DIRECTIVES="language_level=3"
           buildozer -v android debug
         env:
           TERM: xterm
