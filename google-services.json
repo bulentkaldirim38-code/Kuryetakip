@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "551445742820",
+    "firebase_url": "https://canlikonum-b3b18-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "canlikonum-b3b18",
+    "storage_bucket": "canlikonum-b3b18.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:551445742820:android:23e8fefdabae461aa958f1",
+        "android_client_info": {
+          "package_name": "org.takip.kuryetakip"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1vJXWMb8NxFh3rtOD83oNH4j44yPk844"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
