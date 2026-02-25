@@ -92,6 +92,14 @@ class KuryeHaritaApp(App):
         btn.bind(on_release=self.register_user)
         self.popup.open()
 
+    def on_request_failure(self, request, result):
+        self.status_label.text = f"Sunucu Hatası: {request.resp_status}"
+        self.status_label.color = (1, 0, 0, 1)
+
+    def on_request_error(self, request, error):
+        self.status_label.text = f"Bağlantı Hatası: {error}"
+        self.status_label.color = (1, 0, 0, 1)
+
     def register_user(self, instance):
         name = self.name_input.text.strip().lower()
         if name:
@@ -102,7 +110,12 @@ class KuryeHaritaApp(App):
             params = json.dumps({'lat': 0, 'lon': 0, 'approved': False})
             headers = {'Content-type': 'application/json'}
             safe_id = urllib.parse.quote(self.my_id)
-            UrlRequest(f"{self.base_url}/users/{safe_id}.json", req_body=params, req_headers=headers, method='PUT')
+            UrlRequest(
+                f"{self.base_url}/users/{safe_id}.json",
+                req_body=params, req_headers=headers, method='PUT',
+                on_failure=self.on_request_failure,
+                on_error=self.on_request_error
+            )
             
             self.popup.dismiss()
             self.check_approval_status()
@@ -110,7 +123,12 @@ class KuryeHaritaApp(App):
     def check_approval_status(self, *args):
         if self.my_id:
             safe_id = urllib.parse.quote(self.my_id)
-            UrlRequest(f"{self.base_url}/users/{safe_id}/approved.json", on_success=self.on_approval_check)
+            UrlRequest(
+                f"{self.base_url}/users/{safe_id}/approved.json",
+                on_success=self.on_approval_check,
+                on_failure=self.on_request_failure,
+                on_error=self.on_request_error
+            )
 
     def on_approval_check(self, request, result):
         if result is True:
@@ -126,19 +144,33 @@ class KuryeHaritaApp(App):
     def setup_gps(self):
         if platform == 'android':
             from android.permissions import request_permissions, Permission, check_permission
-            perms = [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION]
-            if all([check_permission(p) for p in perms]):
-                self.start_gps_logic()
+            fg_perms = [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION]
+            if all([check_permission(p) for p in fg_perms]):
+                if check_permission(Permission.ACCESS_BACKGROUND_LOCATION):
+                    self.start_gps_logic()
+                else:
+                    self.status_label.text = "Arka plan konum izni isteniyor..."
+                    request_permissions([Permission.ACCESS_BACKGROUND_LOCATION], self.background_permission_callback)
             else:
-                request_permissions(perms, self.permission_callback)
+                self.status_label.text = "Konum izinleri isteniyor..."
+                request_permissions(fg_perms, self.permission_callback)
         else:
             self.start_gps_logic()
 
     def permission_callback(self, permissions, results):
         if all(results): 
-            self.start_gps_logic()
+            from android.permissions import request_permissions, Permission
+            self.status_label.text = "Arka plan konum izni isteniyor..."
+            request_permissions([Permission.ACCESS_BACKGROUND_LOCATION], self.background_permission_callback)
         else:
-            self.status_label.text = "HATA: Konum izni verilmedi!"
+            self.status_label.text = "HATA: Ön plan konum izni verilmedi!"
+
+    def background_permission_callback(self, permissions, results):
+        if all(results):
+            self.status_label.text = "Tüm konum izinleri alındı."
+        else:
+            self.status_label.text = "Arka plan izni yok, sadece ön planda çalışır."
+        self.start_gps_logic()
 
     def start_gps_logic(self):
         try:
@@ -153,16 +185,30 @@ class KuryeHaritaApp(App):
     def my_location_callback(self, **kwargs):
         lat, lon = kwargs.get('lat'), kwargs.get('lon')
         if lat is not None and lon is not None:
-            self.status_label.text = f"KONUM: {lat}, {lon}"
+            self.status_label.text = f"KONUM: {lat}, {lon} (GÖNDERİLİYOR...)"
             if self.is_approved and self.my_id:
                 # Konumu Firebase'e gönder
                 params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
                 headers = {'Content-type': 'application/json'}
                 safe_id = urllib.parse.quote(self.my_id)
-                UrlRequest(f"{self.base_url}/users/{safe_id}.json", req_body=params, req_headers=headers, method='PUT')
+                UrlRequest(
+                    f"{self.base_url}/users/{safe_id}.json",
+                    req_body=params, req_headers=headers, method='PUT',
+                    on_success=self.on_location_update_success,
+                    on_failure=self.on_request_failure,
+                    on_error=self.on_request_error
+                )
+
+    def on_location_update_success(self, request, result):
+        self.status_label.text = f"KONUM GÜNCELLENDİ: {result.get('lat')}, {result.get('lon')}"
 
     def get_data(self, dt):
-        UrlRequest(f"{self.base_url}/users.json", on_success=self.on_data_success)
+        UrlRequest(
+            f"{self.base_url}/users.json",
+            on_success=self.on_data_success,
+            on_failure=self.on_request_failure,
+            on_error=self.on_request_error
+        )
 
     @mainthread
     def on_data_success(self, request, result):
