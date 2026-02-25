@@ -9,7 +9,13 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -25,8 +31,10 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
-            autoconf automake libtool pkg-config cmake zip unzip git gettext libltdl-dev
+          sudo apt-get install -y \
+            build-essential libffi-dev libssl-dev libsqlite3-dev zlib1g-dev \
+            autoconf automake libtool pkg-config cmake zip unzip git gettext \
+            libltdl-dev libgles2-mesa-dev libsdl2-dev
           pip install --upgrade pip
           pip install "Cython<3.0" buildozer python-for-android
 
@@ -34,7 +42,10 @@ jobs:
         run: |
           export APP_ANDROID_ACCEPT_SDK_LICENSE=1
           export BUILDOZER_ALLOW_ORG_NAME_START_WITH_NUMBER=1
+          export P4A_CYTHON_DIRECTIVES="language_level=3"
           buildozer -v android debug
+        env:
+          TERM: xterm
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
