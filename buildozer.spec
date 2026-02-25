@@ -13,7 +13,7 @@ orientation = portrait
 fullscreen = 0
 
 # İzinler yeterli, "features" hataya sebep olduğu için kaldırıldı
-android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE
+android.permissions = INTERNET,ACCESS_FINE_LOCATION,ACCESS_COARSE_LOCATION,ACCESS_BACKGROUND_LOCATION,ACCESS_NETWORK_STATE,ACCESS_WIFI_STATE,FOREGROUND_SERVICE,WAKE_LOCK,POST_NOTIFICATIONS
 
 android.api = 33
 android.minapi = 21
