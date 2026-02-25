@@ -3,6 +3,10 @@ import os
 import certifi
 import json
 import urllib.parse
+
+# Firebase (HTTPS) bağlantı hatalarını önlemek için SSL sertifikasını tanımlıyoruz
+os.environ['SSL_CERT_FILE'] = certifi.where()
+
 from kivy.app import App
 from kivy.uix.button import Button
 from kivy.uix.scrollview import ScrollView
@@ -15,13 +19,11 @@ from kivy.clock import Clock, mainthread
 from kivy.utils import platform
 from kivy.network.urlrequest import UrlRequest
 
-# SSL Sertifikası - Firebase için kritik
-os.environ['SSL_CERT_FILE'] = certifi.where()
-
 try:
     from kivy_garden.mapview import MapView, MapMarker
 except ImportError:
     MapView = None
+    MapMarker = None
 
 class KuryeHaritaApp(App):
     def build(self):
@@ -30,8 +32,10 @@ class KuryeHaritaApp(App):
         self.my_id = None
         self.is_approved = False 
         self.markers = {}
-        self.last_lat = None
-        self.last_lon = None
+        self.gps_active = False
+
+        if MapView is None:
+            return Label(text="MapView Yüklenemedi!", halign="center")
 
         self.main_layout = FloatLayout()
         self.mapview = MapView(zoom=10, lat=38.96, lon=35.24)
@@ -44,7 +48,7 @@ class KuryeHaritaApp(App):
         self.main_layout.add_widget(self.scroll_view)
 
         self.status_label = Label(
-            text="Başlatılıyor...", size_hint=(1, 0.12), 
+            text="Sistem Hazırlanıyor...", size_hint=(1, 0.12), 
             pos_hint={'x': 0, 'y': 0},
             color=(1, 1, 1, 1), bold=True,
             outline_width=2, outline_color=(0,0,0,1)
@@ -57,9 +61,12 @@ class KuryeHaritaApp(App):
         if os.path.exists(self.id_file):
             with open(self.id_file, "r") as f:
                 self.my_id = f.read().strip()
-            if self.my_id: self.check_approval_status()
-            else: self.show_login_popup()
-        else: self.show_login_popup()
+            if self.my_id:
+                self.check_approval_status()
+            else:
+                self.show_login_popup()
+        else:
+            self.show_login_popup()
 
     def check_approval_status(self, *args):
         if self.my_id:
@@ -69,53 +76,56 @@ class KuryeHaritaApp(App):
     def on_approval_check(self, request, result):
         if result is True:
             self.is_approved = True
-            self.status_label.text = "Onaylı: Hibrit Konum Aranıyor..."
-            # GPS'i başlatırken aynı zamanda Ağ üzerinden hızlı konum alalım
-            self.get_network_location() 
+            self.status_label.text = "ONAYLANDI! Konum Aranıyor..."
+            self.status_label.color = (0, 1, 0, 1)
+            # HİBRİT BAŞLANGIÇ: Önce Ağ/Wi-Fi konumu alalım
+            self.get_network_location()
+            # Ardından GPS'i başlatalım
             self.setup_gps()
         else:
             self.status_label.text = "Onay Bekleniyor..."
             Clock.schedule_once(self.check_approval_status, 10)
 
     def get_network_location(self):
-        """GPS uydusu beklenirken Wi-Fi/Baz istasyonu (IP tabanlı) hızlı konum alır"""
-        UrlRequest("http://ip-api.com/json", on_success=self.on_network_ok)
+        """GPS uydusu bağlanana kadar IP/Wi-Fi üzerinden hızlı konum alır."""
+        if not self.gps_active: # Eğer GPS henüz veri göndermediyse
+            UrlRequest("http://ip-api.com/json", on_success=self.on_network_success)
 
-    def on_network_ok(self, req, res):
-        # Eğer GPS henüz veri üretmediyse, Wi-Fi konumunu kullan
-        if self.last_lat is None:
-            lat, lon = res.get('lat'), res.get('lon')
-            self.status_label.text = "Wi-Fi/Ağ Konumu Alındı"
-            self.send_to_firebase(lat, lon)
+    def on_network_success(self, request, result):
+        if result.get('status') == 'success' and not self.gps_active:
+            lat, lon = result.get('lat'), result.get('lon')
+            self.status_label.text = f"Ağ Konumu (Yaklaşık): {lat}, {lon}"
+            self.update_firebase(lat, lon)
 
     def setup_gps(self):
         if platform == 'android':
             from android.permissions import request_permissions, Permission
-            request_permissions([
-                Permission.ACCESS_FINE_LOCATION, 
-                Permission.ACCESS_COARSE_LOCATION,
-                Permission.ACCESS_BACKGROUND_LOCATION
-            ], self.start_gps_logic)
+            perms = [Permission.ACCESS_FINE_LOCATION, Permission.ACCESS_COARSE_LOCATION, Permission.ACCESS_BACKGROUND_LOCATION]
+            request_permissions(perms, self.gps_callback)
         else:
             self.start_gps_logic()
 
-    def start_gps_logic(self, *args):
+    def gps_callback(self, permissions, results):
+        if any(results[:2]): self.start_gps_logic()
+
+    def start_gps_logic(self):
         try:
             from plyer import gps
-            # Hem GPS hem Network provider'ı kullanması için konfigüre edilir
             gps.configure(on_location=self.my_location_callback)
             gps.start(minTime=1000, minDistance=0)
         except Exception as e:
-            self.status_label.text = f"GPS Başlatılamadı: {e}"
+            self.status_label.text = f"GPS Hatası: {e}"
 
     @mainthread
     def my_location_callback(self, **kwargs):
-        self.last_lat, self.last_lon = kwargs.get('lat'), kwargs.get('lon')
-        self.status_label.text = f"GPS Konumu: {self.last_lat}, {self.last_lon}"
-        self.send_to_firebase(self.last_lat, self.last_lon)
+        lat, lon = kwargs.get('lat'), kwargs.get('lon')
+        if lat:
+            self.gps_active = True # GPS artık devrede
+            self.status_label.text = f"Hassas GPS Aktif: {lat}, {lon}"
+            self.update_firebase(lat, lon)
 
-    def send_to_firebase(self, lat, lon):
-        if self.is_approved and self.my_id and lat:
+    def update_firebase(self, lat, lon):
+        if self.is_approved and self.my_id:
             params = json.dumps({'lat': lat, 'lon': lon, 'approved': True})
             headers = {'Content-type': 'application/json'}
             safe_id = urllib.parse.quote(self.my_id)
@@ -131,7 +141,7 @@ class KuryeHaritaApp(App):
         for uid, data in result.items():
             if isinstance(data, dict) and data.get('approved'):
                 lat, lon = data.get('lat'), data.get('lon')
-                if lat:
+                if lat and lat != 0:
                     btn = Button(text=uid.upper(), size_hint_y=None, height=60)
                     btn.bind(on_release=lambda x, la=lat, lo=lon: self.mapview.center_on(la, lo))
                     self.user_list_layout.add_widget(btn)
@@ -144,12 +154,12 @@ class KuryeHaritaApp(App):
 
     def show_login_popup(self):
         content = BoxLayout(orientation='vertical', spacing=10, padding=10)
-        content.add_widget(Label(text="Kurye Adı:"))
-        self.name_input = TextInput(multiline=False)
+        content.add_widget(Label(text="Kurye Adınızı Giriniz:"))
+        self.name_input = TextInput(text='', multiline=False)
         content.add_widget(self.name_input)
         btn = Button(text="Kaydet", size_hint_y=None, height=100)
         content.add_widget(btn)
-        self.popup = Popup(title='Giriş', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
+        self.popup = Popup(title='Kayıt', content=content, size_hint=(0.8, 0.4), auto_dismiss=False)
         btn.bind(on_release=self.register_user)
         self.popup.open()
 
@@ -158,6 +168,7 @@ class KuryeHaritaApp(App):
         if name:
             self.my_id = name
             with open(self.id_file, "w") as f: f.write(self.my_id)
+            self.update_firebase(0, 0)
             self.popup.dismiss()
             self.check_approval_status()
 
